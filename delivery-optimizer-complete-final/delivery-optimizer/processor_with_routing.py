@@ -61,14 +61,24 @@ class DeliveryProcessorWithRouting(DeliveryProcessor):
             'dataframe': df_optimized,
         }
     
-     def optimize_route(self, df: pd.DataFrame, method: str = 'two_opt') -> pd.DataFrame:
+    def optimize_route(self, df: pd.DataFrame, method: str = 'two_opt') -> pd.DataFrame:
 
         start_time = time.time()
 
+        if df is None:
+            raise Exception("DataFrame recebido é None")
+
+        if 'geocodificado' not in df.columns:
+            df['geocodificado'] = True
+
         df_geocoded = df[df['geocodificado'] == True].copy()
+
 
         if len(df_geocoded) < 2:
             return df
+
+        # 🔥 reset controlado
+        df_geocoded = df_geocoded.reset_index(drop=True)
 
         stops = create_stops_from_dataframe(df_geocoded)
         self.route_optimizer = RouteOptimizer(stops)
@@ -85,17 +95,15 @@ class DeliveryProcessorWithRouting(DeliveryProcessor):
         self.optimized_route = route
         self.route_optimization_time = time.time() - start_time
 
-        route_order = {idx: order for order, idx in enumerate(route, 1)}
+        # 🔥 AQUI ESTÁ A CORREÇÃO REAL
+        df_result = df_geocoded.iloc[route].copy()
 
-        df_result = df_geocoded.copy()
-        df_result['ordem_rota'] = df_result.index.map(lambda x: route_order.get(x, 0))
-
-        df_result = df_result.sort_values('ordem_rota').reset_index(drop=True)
+        df_result['ordem_rota'] = range(1, len(df_result) + 1)
         df_result['distancia_total_rota'] = distance
         df_result['metodo_otimizacao'] = method
 
-        return df_result
-    
+        return df_result.reset_index(drop=True)
+
     def _get_route_statistics(self) -> Dict:
         """Retorna estatísticas de otimização de rota."""
         if self.route_optimizer is None or self.route_optimizer.best_distance == float('inf'):

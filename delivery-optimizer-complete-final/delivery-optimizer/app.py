@@ -6,9 +6,10 @@ Sistema de agrupamento inteligente de entregas com normalização de endereços 
 from flask import Flask, render_template, request, send_file, jsonify
 import os
 from werkzeug.utils import secure_filename
-from processor import DeliveryProcessor
 from geocoder import GeocoderService, MockGeocoder
 import traceback
+from processor_with_routing import DeliveryProcessorWithRouting
+
 
 app = Flask(__name__)
 
@@ -71,22 +72,29 @@ def upload_file():
         filename = secure_filename(file.filename)
         input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(input_path)
-        
-        # Processa arquivo
-        processor = DeliveryProcessor(geocoder=geocoder)
-        
+
+        # Instancia o processor com roteamento
+        processor = DeliveryProcessorWithRouting(geocoder=geocoder)
+
         # Lê arquivo Excel
         df_original = processor.read_excel(input_path)
-        
+
         # Agrupa entregas com geocodificação
-        df_grouped = processor.group_deliveries(df_original, enable_geocoding=True)
-        
+        df_grouped = processor.group_deliveries(
+            df_original,
+            enable_geocoding=False
+        )
+
+
+        # 🔥 ADICIONE TAMBÉM A OTIMIZAÇÃO DA ROTA
+        df_optimized = processor.optimize_route(df_grouped, method='two_opt')
+
         # Gera nome do arquivo de saída
         output_filename = f"entregas_otimizadas_{filename}"
         output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-        
+
         # Salva arquivo otimizado
-        processor.save_to_excel(df_grouped, output_path)
+        processor.save_to_excel(df_optimized, output_path)
         
         # Armazena estatísticas
         last_stats = processor.get_statistics()

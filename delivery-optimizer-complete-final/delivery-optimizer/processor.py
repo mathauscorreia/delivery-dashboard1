@@ -94,7 +94,10 @@ class DeliveryProcessor:
             'complemento_normalizado': lambda x: ', '.join([str(c) for c in x if c]),
             'bairro_normalizado': 'first',
             'at_id': lambda x: ', '.join([str(i) for i in x]),
+            'latitude': 'first',      # ✅ PRESERVA LATITUDE
+            'longitude': 'first',     # ✅ PRESERVA LONGITUDE
         }).reset_index()
+
 
         grouped.rename(columns={
             'endereco_normalizado': 'endereco',
@@ -111,30 +114,52 @@ class DeliveryProcessor:
         grouped.drop(columns=['address_key'], inplace=True)
 
         if enable_geocoding:
-            geocoding_start = time.time()
-            geocode_results = []
+            new_latitudes = []
+            new_longitudes = []
+            geocoded_flags = []
+            formatted_addresses = []
 
             for _, row in grouped.iterrows():
+
+                # mantém coordenadas existentes
+                if pd.notna(row.get('latitude')) and pd.notna(row.get('longitude')):
+                    new_latitudes.append(row['latitude'])
+                    new_longitudes.append(row['longitude'])
+                    geocoded_flags.append(True)
+                    formatted_addresses.append('')
+                    continue
+
                 address_data = {
-                    'endereco': str(row['endereco']),
-                    'numero': str(row['numero']),
-                    'complemento': str(row['complemento']),
-                    'bairro': str(row['bairro']),
+                    'endereco': str(row.get('endereco', '')),
+                    'numero': str(row.get('numero', '')),
+                    'complemento': str(row.get('complemento', '')),
+                    'bairro': str(row.get('bairro', '')),
                 }
+
                 result = self.geocoder.geocode(address_data)
-                geocode_results.append(result)
 
-            grouped['latitude'] = [r['latitude'] if r else None for r in geocode_results]
-            grouped['longitude'] = [r['longitude'] if r else None for r in geocode_results]
-            grouped['endereco_formatado'] = [r['formatted_address'] if r else '' for r in geocode_results]
-            grouped['geocodificado'] = [r is not None for r in geocode_results]
+                if result is not None:
+                    new_latitudes.append(result.get('latitude'))
+                    new_longitudes.append(result.get('longitude'))
+                    formatted_addresses.append(result.get('formatted_address', ''))
+                    geocoded_flags.append(True)
+                else:
+                    new_latitudes.append(None)
+                    new_longitudes.append(None)
+                    formatted_addresses.append('')
+                    geocoded_flags.append(False)
 
-            self.geocoding_time = time.time() - geocoding_start
+            grouped['latitude'] = new_latitudes
+            grouped['longitude'] = new_longitudes
+            grouped['endereco_formatado'] = formatted_addresses
+            grouped['geocodificado'] = geocoded_flags
 
-        self.grouped_count = len(grouped)
-        self.processing_time = time.time() - start_time
+        else:
+            grouped['geocodificado'] = False
 
         return grouped
+
+
     
     def save_to_excel(self, df: pd.DataFrame, output_path: str) -> None:
         """
@@ -147,33 +172,23 @@ class DeliveryProcessor:
         try:
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
 
-                # Agrupa por bairro
                 bairros = df['bairro'].unique()
 
                 for bairro in bairros:
                     df_bairro = df[df['bairro'] == bairro].copy()
 
-                    # Remove bairro vazio
-                    if not bairro:
-                        sheet_name = "SEM_BAIRRO"
+                    sheet_name = str(bairro)[:31] if bairro else "SEM_BAIRRO"
+
+                    # 🔥 NÃO REORDENA MAIS
+                    if 'ordem_rota' in df_bairro.columns:
+                        df_bairro = df_bairro.sort_values('ordem_rota')
                     else:
-                        sheet_name = str(bairro)[:31]  # Excel limita a 31 caracteres
+                        df_bairro = df_bairro.reset_index(drop=True)
 
-                    # Ordenação simples por latitude e longitude (rota básica)
-                    if 'latitude' in df_bairro.columns and 'longitude' in df_bairro.columns:
-                        df_bairro = df_bairro.sort_values(
-                            by=['latitude', 'longitude'],
-                            ascending=[True, True]
-                        ).reset_index(drop=True)
-
-                    # Criar ordem da rota
-                    df_bairro.insert(0, 'ordem_rota', range(1, len(df_bairro) + 1))
-
-                    # Salva aba
                     df_bairro.to_excel(writer, index=False, sheet_name=sheet_name)
 
-                    # Ajusta largura das colunas
                     worksheet = writer.sheets[sheet_name]
+
                     for idx, col in enumerate(df_bairro.columns, 1):
                         max_length = max(
                             df_bairro[col].astype(str).apply(len).max(),
