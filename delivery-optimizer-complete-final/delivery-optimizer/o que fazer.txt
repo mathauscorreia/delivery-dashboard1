@@ -1,3 +1,0 @@
-separar por localidade
-separar entrega por casa
-se houver mais de um pacote por casa , unificar eles e mostrar o id dos dois
