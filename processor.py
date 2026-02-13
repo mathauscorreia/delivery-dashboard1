@@ -163,38 +163,42 @@ class DeliveryProcessor:
     
     def save_to_excel(self, df: pd.DataFrame, output_path: str) -> None:
         """
-        Salva DataFrame em arquivo Excel.
-        
-        Args:
-            df: DataFrame a ser salvo
-            output_path: Caminho do arquivo de saída
+        Salva todas as entregas em uma única aba,
+        organizadas por bairro e ordem da rota.
         """
         try:
+            # ordena por bairro e ordem da rota
+            colunas_ordem = []
+
+            if 'bairro' in df.columns:
+                colunas_ordem.append('bairro')
+
+            if 'ordem_rota' in df.columns:
+                colunas_ordem.append('ordem_rota')
+
+            if colunas_ordem:
+                df = df.sort_values(colunas_ordem)
+
+            # salva em UMA única aba
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
 
-                bairros = df['bairro'].unique()
+                df.to_excel(
+                    writer,
+                    index=False,
+                    sheet_name='Entregas'
+                )
 
-                for bairro in bairros:
-                    df_bairro = df[df['bairro'] == bairro].copy()
+                worksheet = writer.sheets['Entregas']
 
-                    sheet_name = str(bairro)[:31] if bairro else "SEM_BAIRRO"
+                # ajusta largura das colunas automaticamente
+                for idx, col in enumerate(df.columns, 1):
 
-                    # 🔥 NÃO REORDENA MAIS
-                    if 'ordem_rota' in df_bairro.columns:
-                        df_bairro = df_bairro.sort_values('ordem_rota')
-                    else:
-                        df_bairro = df_bairro.reset_index(drop=True)
+                    max_length = max(
+                        df[col].astype(str).apply(len).max(),
+                        len(col)
+                    )
 
-                    df_bairro.to_excel(writer, index=False, sheet_name=sheet_name)
-
-                    worksheet = writer.sheets[sheet_name]
-
-                    for idx, col in enumerate(df_bairro.columns, 1):
-                        max_length = max(
-                            df_bairro[col].astype(str).apply(len).max(),
-                            len(col)
-                        )
-                        worksheet.column_dimensions[chr(64 + idx)].width = min(max_length + 2, 50)
+                    worksheet.column_dimensions[chr(64 + idx)].width = min(max_length + 2, 50)
 
         except Exception as e:
             raise Exception(f"Erro ao salvar arquivo Excel: {str(e)}")
