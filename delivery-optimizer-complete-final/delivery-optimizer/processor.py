@@ -1,10 +1,10 @@
 """
 Módulo de processamento de planilhas de entregas.
-Responsável por ler, agrupar e gerar relatórios de otimização com geocodificação.
+Responsável por ler, agrupar e gerar relatórios.
 """
 
 import pandas as pd
-from typing import Dict, List, Tuple
+from typing import Dict
 from normalizer import AddressNormalizer
 from geocoder import MockGeocoder
 import time
@@ -14,131 +14,86 @@ class DeliveryProcessor:
     """Classe responsável pelo processamento de entregas."""
     
     def __init__(self, geocoder=None):
-        self.normalizer = AddressNormalizer()
-        self.geocoder = geocoder or MockGeocoder()  # Usa MockGeocoder por padrão
-        self.original_count = 0
-        self.grouped_count = 0
-        self.processing_time = 0
-        self.geocoding_time = 0
+            self.normalizer = AddressNormalizer()
+            self.geocoder = geocoder or MockGeocoder()
+            self.original_count = 0
+            self.grouped_count = 0
+            self.processing_time = 0
+            self.geocoding_time = 0
         
     def read_excel(self, file_path: str) -> pd.DataFrame:
-        """
-        Lê arquivo Excel com dados de entregas.
-        
-        Args:
-            file_path: Caminho do arquivo Excel
-            
-        Returns:
-            DataFrame com os dados
-        """
-        try:
-            df = pd.read_excel(file_path)
-            
-            # Remove espaços extras dos nomes das colunas
-            df.columns = df.columns.str.strip()
+            try:
+                df = pd.read_excel(file_path)
+                df.columns = df.columns.str.strip()
 
-            #tradução das colunas para nomes padronizados
-            column_mapping = {
-                "Destination Address": "endereco",
-                "Zipcode/Postal code": "cep",
-                "City": "cidade",
-                "Latitude": "latitude",
-                "Longitude": "longitude",
-                "AT ID": "at_id",
-                "SPX TN": "spx_tn"
-            }
+                column_mapping = {
+                    "Destination Address": "endereco",
+                    "Zipcode/Postal code": "cep",
+                    "City": "cidade",
+                    "Latitude": "latitude",
+                    "Longitude": "longitude",
+                    "AT ID": "at_id",
+                    "SPX TN": "spx_tn"
+                }
 
-            
-            df.rename(columns=column_mapping, inplace=True)
+                df.rename(columns=column_mapping, inplace=True)
+                df.columns = df.columns.str.lower().str.strip()
 
-            #olocar minusculo,após renomear
-            df.columns = df.columns.str.lower().str.strip()
+                if "numero" not in df.columns and "endereco" in df.columns:
+                    df["numero"] = df["endereco"].str.extract(r',\s*(\d+)')
+                    df["numero"] = df["numero"].fillna("s/n")
 
-            #Extrair número do endereço
-            if "numero" not in df.columns and "endereco" in df.columns:
-                df["numero"] = df["endereco"].str.extract(r',\s*(\d+)')
-                df["numero"] = df["numero"].fillna("s/n")
+                if "bairro" not in df.columns:
+                    df["bairro"] = ""
 
-            # se nãotiver bairro , cria
-            if "bairro" not in df.columns:
-                df["bairro"] = ""
-            
-            #complemento
-            if "complemento" not in df.columns:
-                df["complemento"] = ""
+                if "complemento" not in df.columns:
+                    df["complemento"] = ""
 
-            #id automatico
-            if "id" not in df.columns:
-                df["id"] = range(1, len(df) + 1)
+                if "id" not in df.columns:
+                    df["id"] = range(1, len(df) + 1)
 
-            #validação final
-            required_columns = ['endereco', 'numero', 'bairro']
-            missing_columns = [col for col in required_columns if col not in df.columns]
+                df = df.fillna("")
 
-            #preenher valores vazios
-            df = df.fillna('')
+                for col in ["endereco", "numero", "bairro"]:
+                    df[col] = df[col].astype(str)
 
-            #converte para string
-            for col in ["endereco", "numero", "bairro"]:
-                df[col] = df[col].astype(str)
-            
-            return df
+                return df
 
-        except Exception as e:
-            raise Exception(f"Erro ao ler arquivo Excel: {str(e)}")
+            except Exception as e:
+                raise Exception(f"Erro ao ler arquivo Excel: {str(e)}")
     
     def group_deliveries(self, df: pd.DataFrame, enable_geocoding: bool = True) -> pd.DataFrame:
-        """
-        Agrupa entregas por endereço normalizado e geocodifica.
-        
-        Args:
-            df: DataFrame com entregas originais
-            enable_geocoding: Se deve geocodificar os endereços
-            
-        Returns:
-            DataFrame com entregas agrupadas e geocodificadas
-        """
         start_time = time.time()
-        
         self.original_count = len(df)
-        
-        # Lista para armazenar endereços normalizados
+
         normalized_addresses = []
         address_keys = []
-        
-        # Normaliza cada endereço
-        for idx, row in df.iterrows():
+
+        for _, row in df.iterrows():
             address_data = {
                 'endereco': row['endereco'],
                 'numero': row['numero'],
                 'complemento': row['complemento'],
                 'bairro': row['bairro'],
             }
-            
-            # Normaliza o endereço
+
             normalized = self.normalizer.normalize_address(address_data)
             normalized_addresses.append(normalized)
-            
-            # Cria chave para agrupamento
             key = self.normalizer.create_address_key(normalized)
             address_keys.append(key)
-        
-        # Adiciona colunas normalizadas ao DataFrame
-        df['endereco_normalizado'] = [addr['endereco'] for addr in normalized_addresses]
-        df['numero_normalizado'] = [addr['numero'] for addr in normalized_addresses]
-        df['complemento_normalizado'] = [addr['complemento'] for addr in normalized_addresses]
-        df['bairro_normalizado'] = [addr['bairro'] for addr in normalized_addresses]
+
+        df['endereco_normalizado'] = [a['endereco'] for a in normalized_addresses]
+        df['numero_normalizado'] = [a['numero'] for a in normalized_addresses]
+        df['complemento_normalizado'] = [a['complemento'] for a in normalized_addresses]
+        df['bairro_normalizado'] = [a['bairro'] for a in normalized_addresses]
         df['address_key'] = address_keys
-        
-        # Agrupa por chave de endereço
+
         grouped = df.groupby('address_key').agg({
             'endereco_normalizado': 'first',
             'numero_normalizado': 'first',
             'complemento_normalizado': lambda x: ', '.join([str(c) for c in x if c]),
             'bairro_normalizado': 'first',
             'at_id': lambda x: ', '.join([str(i) for i in x]),
-            'latitude': 'first',
-            'longitude': 'first'
         }).reset_index()
 
         grouped.rename(columns={
@@ -155,67 +110,30 @@ class DeliveryProcessor:
 
         grouped.drop(columns=['address_key'], inplace=True)
 
-        
-        # Geocodifica endereços agrupados
         if enable_geocoding:
             geocoding_start = time.time()
-            
             geocode_results = []
-            for idx, row in grouped.iterrows():
+
+            for _, row in grouped.iterrows():
                 address_data = {
                     'endereco': str(row['endereco']),
                     'numero': str(row['numero']),
                     'complemento': str(row['complemento']),
                     'bairro': str(row['bairro']),
                 }
-                
                 result = self.geocoder.geocode(address_data)
                 geocode_results.append(result)
-            
-            # Adiciona coordenadas ao DataFrame
+
             grouped['latitude'] = [r['latitude'] if r else None for r in geocode_results]
             grouped['longitude'] = [r['longitude'] if r else None for r in geocode_results]
             grouped['endereco_formatado'] = [r['formatted_address'] if r else '' for r in geocode_results]
             grouped['geocodificado'] = [r is not None for r in geocode_results]
-            
-            self.geocoding_time = time.time() - geocoding_start
-        
-        # Seleciona e ordena colunas finais
-        if enable_geocoding:
-            output_columns = [
-                'endereco',
-                'numero',
-                'complemento',
-                'bairro',
-                'quantidade_pacotes',
-                'ids_agrupados',
-                'latitude',
-                'longitude',
-                'endereco_formatado',
-                'geocodificado',
-            ]
-        else:
-            output_columns = [
-                'endereco',
-                'numero',
-                'complemento',
-                'bairro',
-                'quantidade_pacotes',
-                'ids_agrupados',
-            ]
-        
-        grouped = grouped[output_columns]
-        
-        # Ordena por quantidade de pacotes (maior para menor)
-        grouped = grouped.sort_values(
-            by=['bairro', 'quantidade_pacotes'],
-            ascending=[True, False]
-        ).reset_index(drop=True)
 
-        
+            self.geocoding_time = time.time() - geocoding_start
+
         self.grouped_count = len(grouped)
         self.processing_time = time.time() - start_time
-        
+
         return grouped
     
     def save_to_excel(self, df: pd.DataFrame, output_path: str) -> None:

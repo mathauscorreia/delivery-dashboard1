@@ -61,33 +61,18 @@ class DeliveryProcessorWithRouting(DeliveryProcessor):
             'dataframe': df_optimized,
         }
     
-    def optimize_route(self, df: pd.DataFrame, method: str = 'two_opt') -> pd.DataFrame:
-        """
-        Otimiza rota das entregas agrupadas.
-        
-        Args:
-            df: DataFrame com entregas agrupadas e geocodificadas
-            method: Método de otimização
-            
-        Returns:
-            DataFrame com ordem otimizada
-        """
+     def optimize_route(self, df: pd.DataFrame, method: str = 'two_opt') -> pd.DataFrame:
+
         start_time = time.time()
-        
-        # Filtra apenas paradas geocodificadas
+
         df_geocoded = df[df['geocodificado'] == True].copy()
-        
+
         if len(df_geocoded) < 2:
-            # Se não há paradas suficientes, retorna como está
             return df
-        
-        # Cria paradas
+
         stops = create_stops_from_dataframe(df_geocoded)
-        
-        # Cria otimizador
         self.route_optimizer = RouteOptimizer(stops)
-        
-        # Otimiza rota
+
         if method == 'nearest_neighbor':
             route, distance = self.route_optimizer.nearest_neighbor()
         elif method == 'two_opt':
@@ -96,25 +81,19 @@ class DeliveryProcessorWithRouting(DeliveryProcessor):
             route, distance = self.route_optimizer.genetic_algorithm()
         else:
             raise ValueError(f"Método desconhecido: {method}")
-        
+
         self.optimized_route = route
         self.route_optimization_time = time.time() - start_time
-        
-        # Cria DataFrame com ordem otimizada
-        # Usa índice do DataFrame como ID da parada
+
         route_order = {idx: order for order, idx in enumerate(route, 1)}
-        
-        # Adiciona coluna de ordem
+
         df_result = df_geocoded.copy()
         df_result['ordem_rota'] = df_result.index.map(lambda x: route_order.get(x, 0))
-        
-        # Ordena por ordem da rota
-        df_result = df_result.sort_values('ordem_rota', ascending=True).reset_index(drop=True)
-        
-        # Adiciona informações de rota
+
+        df_result = df_result.sort_values('ordem_rota').reset_index(drop=True)
         df_result['distancia_total_rota'] = distance
         df_result['metodo_otimizacao'] = method
-        
+
         return df_result
     
     def _get_route_statistics(self) -> Dict:
