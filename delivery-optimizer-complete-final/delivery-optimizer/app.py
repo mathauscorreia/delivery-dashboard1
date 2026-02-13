@@ -13,6 +13,7 @@ from processor_with_routing import DeliveryProcessorWithRouting
 
 app = Flask(__name__)
 
+
 # Configurações
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
@@ -185,4 +186,7 @@ if __name__ == '__main__':
     
     print("\n⚡ Aguardando upload de planilhas...\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    if __name__ == '__main__':
+        port = int(os.environ.get("PORT", 5000))
+        app.run(host='0.0.0.0', port=port)
+
