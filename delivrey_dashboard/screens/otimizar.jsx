@@ -66,22 +66,29 @@ export default function Otimizar() {
   function processarArquivo(data) {
     setParadasOriginais(data.length);
 
-    // AGRUPAMENTO POR ENDEREÇO
     const agrupado = {};
 
     data.forEach((item) => {
-      const endereco = item.Endereco || item.ENDERECO || item.endereco;
+        const endereco1 = item["Address Line 1"] || "";
+        const endereco2 = item["Address Line 2"] || "";
+        const enderecoCompleto = `${endereco1} ${endereco2}`.trim();
 
-      if (!agrupado[endereco]) {
-        agrupado[endereco] = {
-          endereco,
-          pacotes: 1,
-          latitude: item.Latitude || -8.0476,
-          longitude: item.Longitude || -34.877,
+        const note = item["Notes"] || "";
+
+        if (!agrupado[enderecoCompleto]) {
+        agrupado[enderecoCompleto] = {
+            endereco: enderecoCompleto,
+            address1: endereco1,
+            address2: endereco2,
+            latitude: Number(item.Latitude),
+            longitude: Number(item.Longitude),
+            pacotes: 1,
+            notes: [note],
         };
-      } else {
-        agrupado[endereco].pacotes += 1;
-      }
+        } else {
+        agrupado[enderecoCompleto].pacotes += 1;
+        agrupado[enderecoCompleto].notes.push(note);
+        }
     });
 
     const lista = Object.values(agrupado);
@@ -90,11 +97,50 @@ export default function Otimizar() {
     setParadasAgrupadas(lista.length);
 
     const reducaoCalculada = Math.round(
-      ((data.length - lista.length) / data.length) * 100
+        ((data.length - lista.length) / data.length) * 100
     );
 
     setReducao(reducaoCalculada);
-  }
+
+    gerarArquivoRota(lista);
+    }
+
+    async function gerarArquivoRota(lista) {
+        try {
+            const dadosExport = lista.map((item, index) => ({
+            Ordem: index + 1,
+            Endereco: item.endereco,
+            "Address Line 1": item.address1,
+            "Address Line 2": item.address2,
+            Latitude: item.latitude,
+            Longitude: item.longitude,
+            Pacotes: item.pacotes,
+            Notes: item.notes.join(" | "),
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dadosExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Rota");
+
+            const wbout = XLSX.write(workbook, {
+            type: "base64",
+            bookType: "xlsx",
+            });
+
+            const fileUri =
+            FileSystem.documentDirectory + "rota_spoke.xlsx";
+
+            await FileSystem.writeAsStringAsync(fileUri, wbout, {
+            encoding: FileSystem.EncodingType.Base64,
+            });
+
+            Alert.alert("Arquivo rota_spoke.xlsx gerado com sucesso!");
+
+        } catch (err) {
+            console.log("Erro ao gerar arquivo:", err);
+        }
+        }
+
 
   function irParaMapa() {
     if (paradas.length === 0) {

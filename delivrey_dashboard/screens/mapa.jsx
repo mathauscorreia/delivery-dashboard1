@@ -1,102 +1,139 @@
 import React, { useEffect, useState, useRef } from "react";
-import { StyleSheet, View, ActivityIndicator, Alert } from "react-native";
+import {
+  StyleSheet,
+  View,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
 import { useRoute } from "@react-navigation/native";
 import { decode } from "@mapbox/polyline";
+import { getDistance } from "geolib";
 
 export default function Mapa() {
-  const [location, setLocation] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [rotaReal, setRotaReal] = useState([]);
-
   const route = useRoute();
-  const rota = route.params?.rota || [];
+  const paradasOriginais = route.params?.rota || [];
+
+  const [location, setLocation] = useState(null);
+  const [rotaReal, setRotaReal] = useState([]);
+  const [paradas, setParadas] = useState([]);
+  const [paradaAtual, setParadaAtual] = useState(0);
+  const [distancia, setDistancia] = useState(0);
+  const [duracao, setDuracao] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const mapRef = useRef(null);
+  const apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImI3MDYwY2M0YmE0YjRhMjY5NGIyMjEwZGVkODU1YzVhIiwiaCI6Im11cm11cjY0In0=";
 
-  // 🔥 BUSCAR ROTA REAL
-  async function buscarRotaGoogle() {
+  // 🚀 GERAR ROTA
+  async function gerarRota(inicio) {
     try {
-      if (rota.length < 2) return;
+      const coords = [
+        [inicio.longitude, inicio.latitude],
+        ...paradas.map(p => [Number(p.longitude), Number(p.latitude)]),
+      ];
 
-      const origin = `${rota[0].latitude},${rota[0].longitude}`;
-      const destination = `${rota[rota.length - 1].latitude},${rota[rota.length - 1].longitude}`;
+      const response = await fetch(
+        "https://api.openrouteservice.org/v2/directions/driving-car",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: apiKey,
+          },
+          body: JSON.stringify({
+            coordinates: coords,
+            optimize_waypoints: true,
+          }),
+        }
+      );
 
-      const waypoints = rota
-        .slice(1, rota.length - 1)
-        .map(p => `${p.latitude},${p.longitude}`)
-        .join("|");
-
-      const apiKey = "SUA_API_KEY_AQUI";
-
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&waypoints=${waypoints}&key=${apiKey}`;
-
-      const response = await fetch(url);
       const data = await response.json();
+      const rota = data.routes[0];
 
-      if (!data.routes || data.routes.length === 0) {
-        Alert.alert("Não foi possível gerar rota real");
-        return;
-      }
+      setDistancia((rota.summary.distance / 1000).toFixed(2));
+      setDuracao(Math.round(rota.summary.duration / 60));
 
-      const points = decode(data.routes[0].overview_polyline.points);
-
-      const coords = points.map(point => ({
-        latitude: point[0],
-        longitude: point[1],
+      const decoded = decode(rota.geometry);
+      const poly = decoded.map(p => ({
+        latitude: p[0],
+        longitude: p[1],
       }));
 
-      setRotaReal(coords);
+      setRotaReal(poly);
 
-    } catch (error) {
-      console.log("Erro rota Google:", error);
-      Alert.alert("Erro ao buscar rota");
+      mapRef.current?.fitToCoordinates(poly, {
+        edgePadding: { top: 100, right: 50, bottom: 250, left: 50 },
+        animated: true,
+      });
+
+    } catch (err) {
+      console.log("Erro rota:", err);
     }
   }
 
-  // 🔥 LOCALIZAÇÃO
+  // 📍 TRACKING EM TEMPO REAL
+  async function iniciarTracking() {
+    await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        distanceInterval: 5,
+      },
+      (pos) => {
+        const novaLoc = pos.coords;
+        setLocation(novaLoc);
+
+        // 🔥 verificar desvio da rota
+        if (rotaReal.length > 0) {
+          const distanciaRota = getDistance(novaLoc, rotaReal[0]);
+
+          if (distanciaRota > 80) {
+            console.log("Desviou da rota — recalculando");
+            gerarRota(novaLoc);
+          }
+        }
+      }
+    );
+  }
+
+  // 📍 INICIALIZAR
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permissão de localização negada");
+        Alert.alert("Permissão negada");
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation.coords);
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc.coords);
+      setParadas(paradasOriginais);
       setLoading(false);
-
-      Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 3000,
-          distanceInterval: 1,
-        },
-        (newLocation) => {
-          setLocation(newLocation.coords);
-        }
-      );
+      gerarRota(loc.coords);
+      iniciarTracking();
     })();
   }, []);
 
-  // 🔥 QUANDO RECEBER ROTA → BUSCA ROTA REAL
-  useEffect(() => {
-    if (rota.length > 1) {
-      buscarRotaGoogle();
-    }
-  }, [rota]);
+  // ✅ CONCLUIR PARADA
+  function concluirParada() {
+    if (paradas.length === 0) return;
 
-  // 🔥 AJUSTAR ZOOM
-  useEffect(() => {
-    if (rotaReal.length > 0 && mapRef.current) {
-      mapRef.current.fitToCoordinates(rotaReal, {
-        edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
-        animated: true,
-      });
+    const novas = [...paradas];
+    novas.shift(); // remove primeira parada
+
+    setParadas(novas);
+    setParadaAtual(paradaAtual + 1);
+
+    if (novas.length > 0) {
+      gerarRota(location);
+    } else {
+      Alert.alert("🎉 Todas entregas concluídas!");
+      setRotaReal([]);
     }
-  }, [rotaReal]);
+  }
 
   if (loading || !location) {
     return (
@@ -107,60 +144,88 @@ export default function Mapa() {
   }
 
   return (
-    <MapView
-      ref={mapRef}
-      style={styles.map}
-      showsUserLocation={true}
-      initialRegion={{
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      }}
-    >
-      {/* SUA LOCALIZAÇÃO */}
-      <Marker
-        coordinate={{
-          latitude: location.latitude,
-          longitude: location.longitude,
-        }}
-        title="Você está aqui"
-        pinColor="blue"
-      />
+    <View style={{ flex: 1 }}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        showsUserLocation
+        followsUserLocation
+      >
+        {paradas.map((p, index) => (
+            <Marker
+              key={index}
+              coordinate={{
+                latitude: Number(p.latitude),
+                longitude: Number(p.longitude),
+              }}
+              pinColor={index === 0 ? "green" : "red"}
+              title={`Parada ${index + 1}`}
+              description={`📍 ${p.address1} ${p.address2}
 
-      {/* MARCADORES DAS PARADAS */}
-      {rota.map((p, index) => (
-        <Marker
-          key={index}
-          coordinate={{
-            latitude: Number(p.latitude),
-            longitude: Number(p.longitude),
-          }}
-          title={`Parada ${index + 1}`}
-          description={`${p.endereco} - ${p.pacotes} pacotes`}
-          pinColor="red"
-        />
-      ))}
+            📦 Pacotes: ${p.pacotes}
 
-      {/* 🔥 ROTA REAL */}
-      {rotaReal.length > 0 && (
-        <Polyline
-          coordinates={rotaReal}
-          strokeWidth={5}
-          strokeColor="#2563eb"
-        />
-      )}
-    </MapView>
+            📝 Pedidos:
+            ${p.notes.join("\n")}`}
+            />
+        ))}
+
+        {rotaReal.length > 0 && (
+          <Polyline
+            coordinates={rotaReal}
+            strokeWidth={6}
+            strokeColor="#2563eb"
+          />
+        )}
+      </MapView>
+
+      {/* 🔥 PAINEL PROFISSIONAL */}
+      <View style={styles.painel}>
+        <Text style={styles.titulo}>🚚 Entrega em andamento</Text>
+        <Text>📍 Próxima: {paradas[0]?.endereco || "Finalizado"}</Text>
+        <Text>📏 {distancia} km restantes</Text>
+        <Text>⏱️ {duracao} min estimados</Text>
+
+        {paradas.length > 0 && (
+          <TouchableOpacity style={styles.botao} onPress={concluirParada}>
+            <Text style={styles.botaoTexto}>✅ Concluir Parada</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  map: {
-    flex: 1,
-  },
+  map: { flex: 1 },
   loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  painel: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%",
+    backgroundColor: "#fff",
+    padding: 20,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    elevation: 10,
+  },
+  titulo: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  botao: {
+    backgroundColor: "#16a34a",
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  botaoTexto: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
