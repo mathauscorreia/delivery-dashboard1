@@ -1,4 +1,4 @@
-package com.delivreydashboard
+package com.matewx_j.delivrey_dashboard
 
 import android.app.Application
 import android.content.res.Configuration

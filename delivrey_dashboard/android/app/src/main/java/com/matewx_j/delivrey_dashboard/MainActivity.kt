@@ -1,4 +1,4 @@
-package com.delivreydashboard
+package com.matewx_j.delivrey_dashboard
 
 import android.os.Build
 import android.os.Bundle

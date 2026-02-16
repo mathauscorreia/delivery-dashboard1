@@ -2,6 +2,20 @@
   "expo": {
     "name": "delivrey_dashboard",
     "slug": "delivrey_dashboard",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "package": "com.matewx_j.delivrey_dashboard"
+    },
+    "ios": {
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Este aplicativo precisa acessar sua localização para mostrar sua posição no mapa."
+      }
+    }
   }
 }
