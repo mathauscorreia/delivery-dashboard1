@@ -24,6 +24,7 @@ export default function Mapa() {
   const [distancia, setDistancia] = useState(0);
   const [duracao, setDuracao] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [rotaIniciada, setRotaIniciada] = useState(false);
 
   const mapRef = useRef(null);
   const apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImI3MDYwY2M0YmE0YjRhMjY5NGIyMjEwZGVkODU1YzVhIiwiaCI6Im11cm11cjY0In0=";
@@ -76,7 +77,11 @@ export default function Mapa() {
   }
 
   // 📍 TRACKING EM TEMPO REAL
-  async function iniciarTracking() {
+ async function iniciarTracking() {
+    if (rotaIniciada) return;
+
+    setRotaIniciada(true);
+
     await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.High,
@@ -86,7 +91,6 @@ export default function Mapa() {
         const novaLoc = pos.coords;
         setLocation(novaLoc);
 
-        // 🔥 verificar desvio da rota
         if (rotaReal.length > 0) {
           const distanciaRota = getDistance(novaLoc, rotaReal[0]);
 
@@ -113,7 +117,6 @@ export default function Mapa() {
       setParadas(paradasOriginais);
       setLoading(false);
       gerarRota(loc.coords);
-      iniciarTracking();
     })();
   }, []);
 
@@ -184,6 +187,16 @@ export default function Mapa() {
         <Text>📍 Próxima: {paradas[0]?.endereco || "Finalizado"}</Text>
         <Text>📏 {distancia} km restantes</Text>
         <Text>⏱️ {duracao} min estimados</Text>
+
+        {!rotaIniciada && (
+          <TouchableOpacity
+            style={[styles.botao, { backgroundColor: "#2563eb" }]}
+            onPress={iniciarTracking}
+          >
+            <Text style={styles.botaoTexto}>🚀 Começar Rota</Text>
+          </TouchableOpacity>
+        )}
+
 
         {paradas.length > 0 && (
           <TouchableOpacity style={styles.botao} onPress={concluirParada}>
