@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as XLSX from "xlsx";
 import { BarChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
@@ -26,28 +26,42 @@ export default function Otimizar() {
 
   async function handleUpload() {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+        const result = await DocumentPicker.getDocumentAsync({
+        type: [
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ],
+        copyToCacheDirectory: true,
+        });
 
-      if (result.canceled) return;
+        if (result.canceled) return;
 
-      const fileUri = result.assets[0].uri;
+        const fileUri = result.assets[0].uri;
 
-      const fileData = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+        // LER COMO STRING BINÁRIA
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: "base64",
+        });
 
-      const workbook = XLSX.read(fileData, { type: "base64" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
+        const workbook = XLSX.read(fileContent, {
+        type: "base64",
+        });
 
-      processarArquivo(jsonData);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        if (!jsonData || jsonData.length === 0) {
+        Alert.alert("Arquivo vazio ou formato inválido");
+        return;
+        }
+
+        processarArquivo(jsonData);
     } catch (error) {
-      Alert.alert("Erro ao ler arquivo");
-      console.log(error);
+        console.log("ERRO REAL:", error);
+        Alert.alert("Erro ao ler arquivo", error.message);
     }
-  }
+    }
 
   function processarArquivo(data) {
     setParadasOriginais(data.length);
