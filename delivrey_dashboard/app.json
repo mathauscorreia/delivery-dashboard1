@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "delivrey_dashboard",
+    "name": "Delivery Dashboard",
     "slug": "delivrey_dashboard",
     "version": "1.0.0",
+    "icon": "./img/logo.png",
     "android": {
       "permissions": [
         "ACCESS_FINE_LOCATION",
