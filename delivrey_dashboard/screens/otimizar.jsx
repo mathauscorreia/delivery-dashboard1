@@ -5,275 +5,165 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  ActivityIndicator,
   Alert,
 } from "react-native";
+
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import * as XLSX from "xlsx";
-import { BarChart } from "react-native-chart-kit";
-import { useNavigation } from "@react-navigation/native";
 
-const screenWidth = Dimensions.get("window").width;
+import { processRoute } from "../utils/routeProcessor";
+import { parseXLSXBase64 } from "../utils/excelParser";
 
 export default function Otimizar() {
-  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
 
-  const [paradasOriginais, setParadasOriginais] = useState(0);
-  const [paradasAgrupadas, setParadasAgrupadas] = useState(0);
-  const [reducao, setReducao] = useState(0);
-  const [paradas, setParadas] = useState([]);
-
-  async function handleUpload() {
+  async function pickFile() {
     try {
-        const result = await DocumentPicker.getDocumentAsync({
+      const res = await DocumentPicker.getDocumentAsync({
         type: [
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-excel",
         ],
         copyToCacheDirectory: true,
-        });
+      });
 
-        if (result.canceled) return;
+      if (res.canceled) return;
 
-        const fileUri = result.assets[0].uri;
+      setLoading(true);
 
-        // LER COMO STRING BINÁRIA
-        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: "base64",
-        });
+      const fileUri = res.assets[0].uri;
 
-        const workbook = XLSX.read(fileContent, {
-        type: "base64",
-        });
+      // 🔥 LER BASE64 (FORMA CORRETA NO RN)
+      const base64 = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: "base64",
+      });
 
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+      // 🔥 PARSE IGUAL AO WEB
+      const stops = parseXLSXBase64(base64);
 
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-        if (!jsonData || jsonData.length === 0) {
-        Alert.alert("Arquivo vazio ou formato inválido");
+      if (!stops || stops.length === 0) {
+        Alert.alert("Erro", "Planilha vazia ou inválida.");
+        setLoading(false);
         return;
-        }
+      }
 
-        processarArquivo(jsonData);
+      // 🔥 PROCESSAMENTO ORIGINAL
+      const processed = processRoute(stops);
+
+      setResult(processed);
+      setLoading(false);
     } catch (error) {
-        console.log("ERRO REAL:", error);
-        Alert.alert("Erro ao ler arquivo", error.message);
+      console.log(error);
+      Alert.alert("Erro", "Erro ao processar arquivo.");
+      setLoading(false);
     }
-    }
-
-  function processarArquivo(data) {
-    setParadasOriginais(data.length);
-
-    const agrupado = {};
-
-    data.forEach((item) => {
-        const endereco1 = item["Address Line 1"] || "";
-        const endereco2 = item["Address Line 2"] || "";
-        const enderecoCompleto = `${endereco1} ${endereco2}`.trim();
-
-        const note = item["Notes"] || "";
-
-        if (!agrupado[enderecoCompleto]) {
-        agrupado[enderecoCompleto] = {
-            endereco: enderecoCompleto,
-            address1: endereco1,
-            address2: endereco2,
-            latitude: Number(item.Latitude),
-            longitude: Number(item.Longitude),
-            pacotes: 1,
-            notes: [note],
-        };
-        } else {
-        agrupado[enderecoCompleto].pacotes += 1;
-        agrupado[enderecoCompleto].notes.push(note);
-        }
-    });
-
-    const lista = Object.values(agrupado);
-
-    setParadas(lista);
-    setParadasAgrupadas(lista.length);
-
-    const reducaoCalculada = Math.round(
-        ((data.length - lista.length) / data.length) * 100
-    );
-
-    setReducao(reducaoCalculada);
-
-    gerarArquivoRota(lista);
-    }
-
-    async function gerarArquivoRota(lista) {
-        try {
-            const dadosExport = lista.map((item, index) => ({
-            Ordem: index + 1,
-            Endereco: item.endereco,
-            "Address Line 1": item.address1,
-            "Address Line 2": item.address2,
-            Latitude: item.latitude,
-            Longitude: item.longitude,
-            Pacotes: item.pacotes,
-            Notes: item.notes.join(" | "),
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(dadosExport);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Rota");
-
-            const wbout = XLSX.write(workbook, {
-            type: "base64",
-            bookType: "xlsx",
-            });
-
-            const fileUri =
-            FileSystem.documentDirectory + "rota_spoke.xlsx";
-
-            await FileSystem.writeAsStringAsync(fileUri, wbout, {
-            encoding: FileSystem.EncodingType.Base64,
-            });
-
-            Alert.alert("Arquivo rota_spoke.xlsx gerado com sucesso!");
-
-        } catch (err) {
-            console.log("Erro ao gerar arquivo:", err);
-        }
-        }
-
-
-  function irParaMapa() {
-    if (paradas.length === 0) {
-      Alert.alert("Nenhuma rota gerada ainda");
-      return;
-    }
-
-    navigation.navigate("Mapa", { rota: paradas });
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.titulo}>SPX Route Grouper</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>SPX Route Optimizer</Text>
 
-      <TouchableOpacity style={styles.botaoUpload} onPress={handleUpload}>
-        <Text style={styles.botaoTexto}>Fazer Upload do Arquivo</Text>
+      <TouchableOpacity style={styles.button} onPress={pickFile}>
+        <Text style={styles.buttonText}>Selecionar Planilha</Text>
       </TouchableOpacity>
 
-      {paradasOriginais > 0 && (
-        <>
-          {/* CARDS */}
-          <View style={styles.card}>
-            <Text>Paradas Originais</Text>
-            <Text style={styles.numero}>{paradasOriginais}</Text>
-          </View>
-
-          <View style={[styles.card, { borderColor: "green" }]}>
-            <Text>Paradas Agrupadas</Text>
-            <Text style={[styles.numero, { color: "green" }]}>
-              {paradasAgrupadas}
-            </Text>
-          </View>
-
-          <View style={[styles.card, { borderColor: "orange" }]}>
-            <Text>Redução</Text>
-            <Text style={[styles.numero, { color: "orange" }]}>
-              {reducao}%
-            </Text>
-          </View>
-
-          {/* GRÁFICO */}
-          <Text style={styles.subtitulo}>Comparação</Text>
-          <BarChart
-            data={{
-              labels: ["Originais", "Agrupadas"],
-              datasets: [
-                {
-                  data: [paradasOriginais, paradasAgrupadas],
-                },
-              ],
-            }}
-            width={screenWidth - 20}
-            height={220}
-            chartConfig={{
-              backgroundGradientFrom: "#fff",
-              backgroundGradientTo: "#fff",
-              decimalPlaces: 0,
-              color: () => `#2563eb`,
-            }}
-            style={{ borderRadius: 10 }}
-          />
-
-          {/* LISTA DE PARADAS */}
-          <Text style={styles.subtitulo}>Rota Gerada</Text>
-
-          {paradas.map((p, index) => (
-            <View key={index} style={styles.itemParada}>
-              <Text style={styles.endereco}>{p.endereco}</Text>
-              <Text>{p.pacotes} pacotes</Text>
-            </View>
-          ))}
-
-          <TouchableOpacity style={styles.botaoMapa} onPress={irParaMapa}>
-            <Text style={styles.botaoTexto}>Ver rota no mapa</Text>
-          </TouchableOpacity>
-        </>
+      {loading && (
+        <ActivityIndicator size="large" style={{ marginTop: 20 }} />
       )}
-    </ScrollView>
+
+      {result && (
+        <ScrollView style={styles.resultContainer}>
+          <Text style={styles.stat}>
+            Paradas Originais: {result.originalCount}
+          </Text>
+          <Text style={styles.stat}>
+            Paradas Agrupadas: {result.groupedCount}
+          </Text>
+          <Text style={styles.stat}>
+            Redução: {result.reductionPercentage}%
+          </Text>
+
+          <View style={{ marginTop: 20 }}>
+            {result.groupedStops.map((stop, index) => (
+              <View key={index} style={styles.card}>
+                <Text style={styles.address}>
+                  {stop.addressLine1}
+                </Text>
+
+                {stop.addressLine2 ? (
+                  <Text style={styles.sub}>
+                    {stop.addressLine2}
+                  </Text>
+                ) : null}
+
+                {stop.notes ? (
+                  <Text style={styles.sub}>
+                    {stop.notes}
+                  </Text>
+                ) : null}
+
+                <Text style={styles.count}>
+                  Pacotes: {stop.packageCount}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 20,
+    backgroundColor: "#0f172a",
   },
-  titulo: {
+  title: {
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 15,
+    color: "#fff",
+    marginBottom: 20,
+    textAlign: "center",
   },
-  botaoUpload: {
+  button: {
     backgroundColor: "#2563eb",
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: "center",
   },
-  botaoMapa: {
-    backgroundColor: "#16a34a",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  botaoTexto: {
+  buttonText: {
     color: "#fff",
     fontWeight: "bold",
   },
+  resultContainer: {
+    marginTop: 20,
+  },
+  stat: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 5,
+  },
   card: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#1e293b",
     padding: 15,
-    borderRadius: 12,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#2563eb",
+    borderRadius: 10,
+    marginBottom: 10,
   },
-  numero: {
-    fontSize: 28,
+  address: {
+    color: "#fff",
     fontWeight: "bold",
+    fontSize: 16,
+  },
+  sub: {
+    color: "#cbd5e1",
+  },
+  count: {
     marginTop: 5,
-  },
-  subtitulo: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 15,
-  },
-  itemParada: {
-    backgroundColor: "#e5e7eb",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  endereco: {
+    color: "#38bdf8",
     fontWeight: "bold",
   },
 });
