@@ -289,5 +289,120 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 2,
   },
+/* ===== RESUMO ===== */
+
+summaryContainer: {
+  marginBottom: 20,
+},
+
+summaryRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: 15,
+},
+
+summaryCard: {
+  flex: 1,
+  padding: 18,
+  borderRadius: 16,
+  marginHorizontal: 5,
+  backgroundColor: "#ffffff",
+  elevation: 2,
+},
+
+blueCard: {
+  borderColor: "#3b82f6",
+  borderWidth: 1,
+},
+
+greenCard: {
+  borderColor: "#22c55e",
+  borderWidth: 1,
+},
+
+orangeCard: {
+  borderColor: "#f97316",
+  borderWidth: 1,
+},
+
+summaryLabelBlue: {
+  color: "#3b82f6",
+  fontWeight: "600",
+  fontSize: 14,
+},
+
+summaryLabelGreen: {
+  color: "#16a34a",
+  fontWeight: "600",
+  fontSize: 14,
+},
+
+summaryLabelOrange: {
+  color: "#ea580c",
+  fontWeight: "600",
+  fontSize: 14,
+},
+
+summaryNumberBlue: {
+  fontSize: 28,
+  fontWeight: "bold",
+  color: "#1e3a8a",
+  marginTop: 8,
+},
+
+summaryNumberGreen: {
+  fontSize: 28,
+  fontWeight: "bold",
+  color: "#166534",
+  marginTop: 8,
+},
+
+summaryNumberOrange: {
+  fontSize: 28,
+  fontWeight: "bold",
+  color: "#7c2d12",
+  marginTop: 8,
+},
+
+/* ===== EFICIÊNCIA ===== */
+
+efficiencyCard: {
+  backgroundColor: "#ffffff",
+  padding: 20,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: "#bfdbfe",
+},
+
+efficiencyTitle: {
+  fontSize: 16,
+  fontWeight: "bold",
+  color: "#0f172a",
+},
+
+efficiencySub: {
+  color: "#64748b",
+  marginTop: 6,
+  marginBottom: 12,
+},
+
+progressContainer: {
+  height: 10,
+  backgroundColor: "#e2e8f0",
+  borderRadius: 20,
+  overflow: "hidden",
+},
+
+progressBar: {
+  height: 10,
+  backgroundColor: "#2563eb",
+},
+
+progressText: {
+  marginTop: 8,
+  fontWeight: "600",
+  color: "#16a34a",
+  alignSelf: "flex-end",
+},
 
 });
