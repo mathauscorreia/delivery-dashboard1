@@ -3,7 +3,7 @@
     "name": "Delivery Dashboard",
     "slug": "delivrey_dashboard",
     "version": "1.0.0",
-    "icon": "./img/logo.png",
+    "icon": "./img/a.png",
     "android": {
       "permissions": [
         "ACCESS_FINE_LOCATION",
