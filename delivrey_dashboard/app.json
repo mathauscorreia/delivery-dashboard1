@@ -16,6 +16,11 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Este aplicativo precisa acessar sua localização para mostrar sua posição no mapa."
       }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eafc7643-1ec0-4bce-b1ec-31df71c2b9e8"
+      }
     }
   }
 }

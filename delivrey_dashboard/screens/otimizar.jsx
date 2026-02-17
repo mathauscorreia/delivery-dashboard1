@@ -16,6 +16,7 @@ import * as Clipboard from "expo-clipboard";
 
 import { processRoute } from "../utils/routeProcessor";
 import { parseXLSXBase64 } from "../utils/excelParser";
+import { exportToSpoke, exportDetailedReport } from "../utils/excelExporter";
 
 export default function Otimizar() {
   const [loading, setLoading] = useState(false);
@@ -82,6 +83,21 @@ function handleProcess() {
   }
 }
 
+async function handleExportSpoke() {
+  if (!result) return;
+  await exportToSpoke(result.groupedStops);
+}
+
+async function handleExportDetailed() {
+  if (!result) return;
+
+  await exportDetailedReport(
+    result.groupedStops,
+    result.originalCount,
+    result.groupedCount,
+    result.reductionPercentage
+  );
+}
 
   return (
     <View style={styles.container}>
@@ -270,6 +286,31 @@ function handleProcess() {
                   )}
                 </View>
               ))}
+                    {/* ===== EXPORTAÇÃO ===== */}
+                    <View style={styles.exportContainer}>
+                      <Text style={styles.exportTitle}>3. Exportar para Spoke</Text>
+                      <Text style={styles.exportSubtitle}>
+                        Baixe o arquivo otimizado pronto para importação no aplicativo Spoke
+                      </Text>
+
+                      <View style={styles.exportButtonsRow}>
+                        <TouchableOpacity
+                          style={styles.exportPrimaryButton}
+                          onPress={handleExportSpoke}
+                        >
+                          <Ionicons name="download-outline" size={18} color="#fff" />
+                          <Text style={styles.exportPrimaryText}>Exportar para Spoke</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.exportSecondaryButton}
+                          onPress={handleExportDetailed}
+                        >
+                          <Ionicons name="document-text-outline" size={18} color="#334155" />
+                          <Text style={styles.exportSecondaryText}>Relatório Completo</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
         </ScrollView>
       )}
     </View>
@@ -622,6 +663,68 @@ processButton: {
 
 processButtonText: {
   color: "#fff",
+  fontWeight: "600",
+  marginLeft: 8,
+},
+/* ===== EXPORTAÇÃO ===== */
+
+exportContainer: {
+  backgroundColor: "#ffffff",
+  padding: 20,
+  borderRadius: 20,
+  marginTop: 20,
+  marginBottom: 40,
+  borderWidth: 1,
+  borderColor: "#bbf7d0",
+},
+
+exportTitle: {
+  fontSize: 16,
+  fontWeight: "bold",
+  color: "#166534",
+},
+
+exportSubtitle: {
+  color: "#64748b",
+  marginTop: 5,
+  marginBottom: 15,
+},
+
+exportButtonsRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+},
+
+exportPrimaryButton: {
+  flex: 1,
+  backgroundColor: "#16a34a",
+  paddingVertical: 14,
+  borderRadius: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 10,
+},
+
+exportPrimaryText: {
+  color: "#fff",
+  fontWeight: "600",
+  marginLeft: 8,
+},
+
+exportSecondaryButton: {
+  flex: 1,
+  borderWidth: 1,
+  borderColor: "#cbd5e1",
+  paddingVertical: 14,
+  borderRadius: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+exportSecondaryText: {
+  color: "#334155",
   fontWeight: "600",
   marginLeft: 8,
 },
