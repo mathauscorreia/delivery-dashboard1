@@ -196,27 +196,25 @@ function handleProcess() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.leftSection}>
-                      <Text style={styles.arrow}>
-                        {expandedIndex === index ? "▴" : "▾"}
-                      </Text>
 
-                      <Text style={styles.indexNumber}>
-                        {index + 1}
-                      </Text>
-                      {/*RUA E NÚMERO */}
-                      <View style={styles.addressContainer}>
-                        <Text style={styles.street}>
-                          {stop.street}
+                      <View style={styles.arrowContainer}>
+                        <Text style={styles.arrow}>
+                          {expandedIndex === index ? "▴" : "▾"}
                         </Text>
-                        {stop.complement && (
-                          <Text style={styles.complement}>
-                            {stop.complement}
-                          </Text>
-                        )}
+                      </View>
+
+                      <View style={styles.indexContainer}>
+                        <Text style={styles.indexNumber}>
+                          {index + 1}
+                        </Text>
+                      </View>
+
+                      <View style={styles.addressContainer}>
                         <Text style={styles.city}>
                           {stop.name} | {stop.addressLine2} | {stop.city}
                         </Text>
                       </View>
+
                     </View>
 
                     <View style={styles.rightSection}>
@@ -420,8 +418,20 @@ const styles = StyleSheet.create({
 
   leftSection: {
     flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
+
+  arrowContainer: {
+  width: 22,
+  alignItems: "center",
+  paddingTop: 4,
+},
+indexContainer: {
+  width: 28,
+  alignItems: "center",
+  paddingTop: 2,
+},
 
   arrow: {
     fontSize: 14,
