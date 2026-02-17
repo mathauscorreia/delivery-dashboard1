@@ -147,7 +147,7 @@ export default function Otimizar() {
                       <Text style={styles.indexNumber}>
                         {index + 1}
                       </Text>
-
+                      {/*RUA E NÚMERO */}
                       <View style={styles.addressContainer}>
                         <Text style={styles.street}>
                           {stop.street}
@@ -158,7 +158,7 @@ export default function Otimizar() {
                           </Text>
                         )}
                         <Text style={styles.city}>
-                          {stop.city}
+                          {stop.name} | {stop.addressLine2} | {stop.city}
                         </Text>
                       </View>
                     </View>
