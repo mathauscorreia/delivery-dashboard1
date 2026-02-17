@@ -55,6 +55,7 @@ export default function Otimizar() {
       }
 
       const processed = processRoute(stops);
+      console.log(JSON.stringify(processed, null, 2));
       setResult(processed);
       setLoading(false);
     } catch (error) {
@@ -128,99 +129,93 @@ export default function Otimizar() {
               </Text>
             </View>
           </View>
-
-          {/* ===== LISTA DE RUAS ===== */}
-          {result.groupedStops.map((stop, index) => {
-            const firstTwo = stop.packages?.slice(0, 2) || [];
-            const remaining = (stop.packageCount || 0) - firstTwo.length;
-
-            return (
-              <View key={index} style={styles.rowContainer}>
-                <TouchableOpacity
-                  style={styles.rowHeader}
-                  onPress={() => toggleExpand(index)}
-                >
-                  {/* COLUNA ESQUERDA (seta + número) */}
-                  <View style={styles.leftSection}>
-                    <Ionicons
-                      name={expandedIndex === index ? "chevron-up" : "chevron-down"}
-                      size={16}
-                      color="#64748b"
-                    />
-                    <Text style={styles.rowNumber}>{index + 1}</Text>
-                  </View>
-
-                  {/* ENDEREÇO */}
-                  <View style={styles.addressSection}>
-                    <Text style={styles.addressMain}>
-                      {stop.addressLine1}
-                    </Text>
-
-                    {stop.addressLine2 && (
-                      <Text style={styles.addressSub}>
-                        {stop.addressLine2}
+              {/* ===== LISTA DE RUAS ===== */}
+              {result.groupedStops.map((stop, index) => (
+                <View key={index} style={styles.cardContainer}>
+                  
+                  {/* HEADER */}
+                  <TouchableOpacity
+                    style={styles.cardHeader}
+                    onPress={() => toggleExpand(index)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.leftSection}>
+                      <Text style={styles.arrow}>
+                        {expandedIndex === index ? "▴" : "▾"}
                       </Text>
-                    )}
 
-                    {stop.city && (
-                      <Text style={styles.addressCity}>
-                        {stop.city}
+                      <Text style={styles.indexNumber}>
+                        {index + 1}
                       </Text>
-                    )}
-                  </View>
 
-                  {/* BADGE */}
-                  <View style={styles.badgeSmall}>
-                    <Text style={styles.badgeSmallText}>
-                      {stop.packageCount}
-                    </Text>
-                  </View>
-
-                  {/* IDS */}
-                  <View style={styles.idsSection}>
-                    {firstTwo.map((pkg, i) => (
-                      <Text key={i} style={styles.idPreview}>
-                        {pkg.id}
-                        {i === 0 && firstTwo.length > 1 ? "," : ""}
-                      </Text>
-                    ))}
-
-                    {remaining > 0 && (
-                      <Text style={styles.moreBlue}>
-                        +{remaining}
-                      </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                {/* EXPANDIDO */}
-                {expandedIndex === index && (
-                  <View style={styles.expandedBox}>
-                    <Text style={styles.expandedTitle}>
-                      Todos os {stop.packageCount} pacotes:
-                    </Text>
-
-                    <View style={styles.chipsContainer}>
-                      {stop.packages?.map((pkg, i) => (
-                        <View key={i} style={styles.chipBlue}>
-                          <Text style={styles.chipBlueText}>
-                            {pkg.id}
+                      <View style={styles.addressContainer}>
+                        <Text style={styles.street}>
+                          {stop.street}
+                        </Text>
+                        {stop.complement && (
+                          <Text style={styles.complement}>
+                            {stop.complement}
                           </Text>
-                        </View>
-                      ))}
+                        )}
+                        <Text style={styles.city}>
+                          {stop.city}
+                        </Text>
+                      </View>
                     </View>
 
-                    <TouchableOpacity style={styles.copyButton}>
-                      <Ionicons name="copy-outline" size={16} color="#334155" />
-                      <Text style={styles.copyText}>
-                        Copiar todos os IDs
+                    <View style={styles.rightSection}>
+                      <View style={styles.badgeCircle}>
+                        <Text style={styles.badgeText}>
+                          {stop.packageIds?.length || 0}
+                        </Text>
+                      </View>
+
+                      <View style={styles.idsPreview}>
+                        {(stop.packageIds || []).slice(0, 2).map((id, i) => (
+                          <Text key={i} style={styles.idText}>
+                            {id}
+                          </Text>
+                        ))}
+
+                        {(stop.packageIds?.length || 0) > 2 && (
+                          <Text style={styles.moreText}>
+                            +{stop.packageIds.length - 2}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* EXPANDIDO */}
+                  {expandedIndex === index && (
+                    <View style={styles.expandedContainer}>
+                      <Text style={styles.expandedTitle}>
+                        Todos os {stop.packageIds?.length || 0} pacotes:
                       </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+
+                      <View style={styles.chipsContainer}>
+                        {(stop.packageIds || []).map((id, i) => (
+                          <View key={i} style={styles.chip}>
+                            <Text style={styles.chipText}>{id}</Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.copyButton}
+                        onPress={() =>
+                          Clipboard.setStringAsync(stop.packageIds.join(", "))
+                        }
+                      >
+                        <Ionicons name="copy-outline" size={16} color="#334155" />
+                        <Text style={styles.copyText}>
+                          Copiar todos os IDs
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
         </ScrollView>
       )}
     </View>
@@ -233,15 +228,18 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#f1f5f9",
   },
+
   title: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#0f172a",
   },
+
   subtitle: {
     color: "#64748b",
     marginBottom: 20,
   },
+
   button: {
     backgroundColor: "#2563eb",
     padding: 12,
@@ -249,327 +247,239 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+
   buttonText: {
     color: "#fff",
     fontWeight: "600",
   },
+
   resultContainer: {
     marginTop: 10,
   },
-  card: {
+
+  /* ===== RESUMO ===== */
+
+  summaryContainer: {
+    marginBottom: 20,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
+
+  summaryCard: {
+    flex: 1,
+    padding: 18,
+    borderRadius: 16,
+    marginHorizontal: 5,
     backgroundColor: "#ffffff",
-    padding: 16,
+  },
+
+  blueCard: { borderWidth: 1, borderColor: "#3b82f6" },
+  greenCard: { borderWidth: 1, borderColor: "#22c55e" },
+  orangeCard: { borderWidth: 1, borderColor: "#f97316" },
+
+  summaryLabelBlue: { color: "#3b82f6", fontWeight: "600" },
+  summaryLabelGreen: { color: "#16a34a", fontWeight: "600" },
+  summaryLabelOrange: { color: "#ea580c", fontWeight: "600" },
+
+  summaryNumberBlue: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#1e3a8a",
+    marginTop: 8,
+  },
+
+  summaryNumberGreen: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#166534",
+    marginTop: 8,
+  },
+
+  summaryNumberOrange: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#7c2d12",
+    marginTop: 8,
+  },
+
+  efficiencyCard: {
+    backgroundColor: "#ffffff",
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+  },
+
+  efficiencyTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+
+  efficiencySub: {
+    color: "#64748b",
+    marginTop: 6,
+    marginBottom: 12,
+  },
+
+  progressContainer: {
+    height: 8,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+
+  progressBar: {
+    height: 8,
+    backgroundColor: "#2563eb",
+  },
+
+  progressText: {
+    marginTop: 8,
+    fontWeight: "600",
+    color: "#16a34a",
+    alignSelf: "flex-end",
+  },
+
+  /* ===== CARD LISTA ===== */
+
+  cardContainer: {
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    overflow: "hidden",
   },
-  rowHeader: {
+
+  cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
   },
-  address: {
-    fontWeight: "600",
+
+  leftSection: {
+    flexDirection: "row",
+    flex: 1,
+  },
+
+  arrow: {
+    fontSize: 14,
+    marginRight: 8,
+    color: "#64748b",
+  },
+
+  indexNumber: {
+    width: 24,
+    color: "#64748b",
+  },
+
+  addressContainer: {
+    flex: 1,
+  },
+
+  street: {
     fontSize: 15,
+    fontWeight: "600",
     color: "#0f172a",
   },
-  sub: {
+
+  complement: {
+    fontSize: 14,
     color: "#64748b",
-    fontSize: 13,
   },
-  badge: {
+
+  city: {
+    fontSize: 14,
+    color: "#0f172a",
+    fontWeight: "500",
+  },
+
+  rightSection: {
+    alignItems: "flex-end",
+  },
+
+  badgeCircle: {
     backgroundColor: "#16a34a",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    width: 28,
+    height: 28,
     borderRadius: 20,
-    marginLeft: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
   },
+
   badgeText: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: 12,
+    fontWeight: "600",
   },
+
+  idsPreview: {
+    alignItems: "flex-end",
+  },
+
+  idText: {
+    fontSize: 13,
+    color: "#475569",
+  },
+
+  moreText: {
+    fontSize: 13,
+    color: "#2563eb",
+    fontWeight: "600",
+  },
+
+  /* ===== EXPANDIDO ===== */
+
   expandedContainer: {
-    marginTop: 15,
     backgroundColor: "#f8fafc",
-    padding: 15,
-    borderRadius: 10,
+    padding: 16,
   },
+
   expandedTitle: {
     fontWeight: "600",
-    marginBottom: 10,
-    color: "#0f172a",
+    marginBottom: 12,
   },
+
   chipsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
   },
+
   chip: {
     borderWidth: 1,
     borderColor: "#93c5fd",
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
+    backgroundColor: "#eff6ff",
     paddingVertical: 6,
     paddingHorizontal: 12,
-    margin: 5,
+    borderRadius: 10,
+    marginRight: 10,
+    marginBottom: 10,
   },
+
   chipText: {
-    color: "#1e293b",
-    fontSize: 12,
+    color: "#1d4ed8",
+    fontSize: 13,
+    fontWeight: "500",
   },
+
   copyButton: {
-    marginTop: 15,
-    backgroundColor: "#e2e8f0",
-    padding: 10,
-    borderRadius: 8,
+    marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    backgroundColor: "#e2e8f0",
+    padding: 12,
+    borderRadius: 8,
   },
+
   copyText: {
+    marginLeft: 6,
+    fontWeight: "600",
     color: "#334155",
-    fontWeight: "600",
-    marginLeft: 5,
   },
-  previewId: {
-    color: "#1e293b",
-    fontSize: 13,
-  },
-  moreText: {
-    color: "#2563eb",
-    fontWeight: "600",
-    marginTop: 2,
-  },
-/* ===== RESUMO ===== */
-
-summaryContainer: {
-  marginBottom: 20,
-},
-
-summaryRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  marginBottom: 15,
-},
-
-summaryCard: {
-  flex: 1,
-  padding: 18,
-  borderRadius: 16,
-  marginHorizontal: 5,
-  backgroundColor: "#ffffff",
-  elevation: 2,
-},
-
-blueCard: {
-  borderColor: "#3b82f6",
-  borderWidth: 1,
-},
-
-greenCard: {
-  borderColor: "#22c55e",
-  borderWidth: 1,
-},
-
-orangeCard: {
-  borderColor: "#f97316",
-  borderWidth: 1,
-},
-
-summaryLabelBlue: {
-  color: "#3b82f6",
-  fontWeight: "600",
-  fontSize: 14,
-},
-
-summaryLabelGreen: {
-  color: "#16a34a",
-  fontWeight: "600",
-  fontSize: 14,
-},
-
-summaryLabelOrange: {
-  color: "#ea580c",
-  fontWeight: "600",
-  fontSize: 14,
-},
-
-summaryNumberBlue: {
-  fontSize: 28,
-  fontWeight: "bold",
-  color: "#1e3a8a",
-  marginTop: 8,
-},
-
-summaryNumberGreen: {
-  fontSize: 28,
-  fontWeight: "bold",
-  color: "#166534",
-  marginTop: 8,
-},
-
-summaryNumberOrange: {
-  fontSize: 28,
-  fontWeight: "bold",
-  color: "#7c2d12",
-  marginTop: 8,
-},
-
-/* ===== EFICIÊNCIA ===== */
-
-efficiencyCard: {
-  backgroundColor: "#ffffff",
-  padding: 20,
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: "#bfdbfe",
-},
-
-efficiencyTitle: {
-  fontSize: 16,
-  fontWeight: "bold",
-  color: "#0f172a",
-},
-
-efficiencySub: {
-  color: "#64748b",
-  marginTop: 6,
-  marginBottom: 12,
-},
-
-progressContainer: {
-  height: 10,
-  backgroundColor: "#e2e8f0",
-  borderRadius: 20,
-  overflow: "hidden",
-},
-
-progressBar: {
-  height: 10,
-  backgroundColor: "#2563eb",
-},
-
-progressText: {
-  marginTop: 8,
-  fontWeight: "600",
-  color: "#16a34a",
-  alignSelf: "flex-end",
-},
-
-rowContainer: {
-  borderBottomWidth: 1,
-  borderColor: "#e2e8f0",
-  paddingVertical: 14,
-},
-
-rowHeader: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-},
-
-leftSection: {
-  width: 40,
-  alignItems: "center",
-},
-
-rowNumber: {
-  fontSize: 14,
-  color: "#64748b",
-  marginTop: 4,
-},
-
-addressSection: {
-  flex: 3,
-},
-
-addressMain: {
-  fontSize: 15,
-  fontWeight: "600",
-  color: "#0f172a",
-},
-
-addressSub: {
-  fontSize: 14,
-  color: "#475569",
-},
-
-addressCity: {
-  fontSize: 14,
-  color: "#0f172a",
-  fontWeight: "500",
-},
-
-badgeSmall: {
-  backgroundColor: "#16a34a",
-  borderRadius: 20,
-  width: 26,
-  height: 26,
-  justifyContent: "center",
-  alignItems: "center",
-  marginHorizontal: 10,
-},
-
-badgeSmallText: {
-  color: "#fff",
-  fontWeight: "600",
-},
-
-idsSection: {
-  flex: 3,
-},
-
-idPreview: {
-  fontSize: 13,
-  color: "#475569",
-},
-
-moreBlue: {
-  color: "#2563eb",
-  fontWeight: "600",
-  marginTop: 2,
-},
-
-expandedBox: {
-  backgroundColor: "#f8fafc",
-  marginTop: 12,
-  padding: 16,
-  borderRadius: 8,
-},
-
-expandedTitle: {
-  fontWeight: "600",
-  marginBottom: 12,
-  color: "#0f172a",
-},
-
-chipBlue: {
-  borderWidth: 1,
-  borderColor: "#93c5fd",
-  backgroundColor: "#eff6ff",
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  borderRadius: 10,
-  marginRight: 10,
-  marginBottom: 10,
-},
-
-chipBlueText: {
-  color: "#1d4ed8",
-  fontSize: 13,
-  fontWeight: "500",
-},
-
-copyButton: {
-  marginTop: 10,
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-},
-
-copyText: {
-  color: "#334155",
-  fontSize: 14,
-},
-
 });
