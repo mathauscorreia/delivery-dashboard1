@@ -21,49 +21,67 @@ export default function Otimizar() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [fileName, setFileName] = useState(null);
+  const [fileBase64, setFileBase64] = useState(null);
+
 
   const toggleExpand = (index) => {
     setExpandedIndex((prev) => (prev === index ? null : index));
   };
 
-  async function pickFile() {
-    try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: [
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "application/vnd.ms-excel",
-        ],
-        copyToCacheDirectory: true,
-      });
+async function pickFile() {
+  try {
+    const res = await DocumentPicker.getDocumentAsync({
+      type: [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+      ],
+      copyToCacheDirectory: true,
+    });
 
-      if (res.canceled) return;
+    if (res.canceled) return;
 
-      setLoading(true);
+    const fileUri = res.assets[0].uri;
+    const name = res.assets[0].name;
 
-      const fileUri = res.assets[0].uri;
+    setFileName(name);
 
-      const base64 = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: "base64",
-      });
+    const base64 = await FileSystem.readAsStringAsync(fileUri, {
+      encoding: "base64",
+    });
 
-      const stops = parseXLSXBase64(base64);
-
-      if (!stops || stops.length === 0) {
-        Alert.alert("Erro", "Planilha vazia ou inválida.");
-        setLoading(false);
-        return;
-      }
-
-      const processed = processRoute(stops);
-      console.log(JSON.stringify(processed, null, 2));
-      setResult(processed);
-      setLoading(false);
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Erro", "Erro ao processar arquivo.");
-      setLoading(false);
-    }
+    setFileBase64(base64);
+  } catch (error) {
+    Alert.alert("Erro", "Erro ao selecionar arquivo.");
   }
+}
+
+function handleProcess() {
+  if (!fileBase64) {
+    Alert.alert("Selecione uma planilha primeiro.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const stops = parseXLSXBase64(fileBase64);
+
+    if (!stops || stops.length === 0) {
+      Alert.alert("Erro", "Planilha vazia ou inválida.");
+      setLoading(false);
+      return;
+    }
+
+    const processed = processRoute(stops);
+    setResult(processed);
+    setLoading(false);
+  } catch (error) {
+    Alert.alert("Erro", "Erro ao processar arquivo.");
+    setLoading(false);
+  }
+}
+
 
   return (
     <View style={styles.container}>
@@ -72,9 +90,47 @@ export default function Otimizar() {
         Visualização das paradas prontas para exportação.
       </Text>
 
-      <TouchableOpacity style={styles.button} onPress={pickFile}>
-        <Text style={styles.buttonText}>Selecionar Planilha</Text>
-      </TouchableOpacity>
+      {/* ===== CARD UPLOAD ===== */}
+
+      <View style={styles.uploadContainer}>
+        <Text style={styles.uploadTitle}>1. Carregar Arquivo SPX</Text>
+        <Text style={styles.uploadSubtitle}>
+          Faça upload do arquivo XLSX exportado do SPX Motorista
+        </Text>
+
+        <TouchableOpacity
+          style={styles.uploadArea}
+          onPress={pickFile}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="document-outline" size={42} color="#2563eb" />
+
+          {fileName ? (
+            <>
+              <Text style={styles.fileName}>{fileName}</Text>
+
+              <View style={styles.loadedBadge}>
+                <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+                <Text style={styles.loadedText}>Arquivo carregado</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.selectText}>Toque para selecionar a planilha</Text>
+          )}
+        </TouchableOpacity>
+
+        {fileName && (
+          <TouchableOpacity
+            style={styles.processButton}
+            onPress={handleProcess}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cube-outline" size={18} color="#fff" />
+            <Text style={styles.processButtonText}>Processar e Agrupar</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
 
       {loading && <ActivityIndicator size="large" style={{ marginTop: 20 }} />}
 
@@ -482,4 +538,82 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#334155",
   },
+
+  /* ===== UPLOAD CARD ===== */
+
+uploadContainer: {
+  backgroundColor: "#ffffff",
+  padding: 20,
+  borderRadius: 20,
+  marginBottom: 20,
+},
+
+uploadTitle: {
+  fontSize: 16,
+  fontWeight: "bold",
+  color: "#0f172a",
+},
+
+uploadSubtitle: {
+  color: "#64748b",
+  marginBottom: 15,
+},
+
+uploadArea: {
+  borderWidth: 2,
+  borderColor: "#93c5fd",
+  borderStyle: "dashed",
+  borderRadius: 16,
+  paddingVertical: 40,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#f8fafc",
+},
+
+selectText: {
+  marginTop: 10,
+  color: "#64748b",
+},
+
+fileName: {
+  marginTop: 15,
+  fontSize: 15,
+  fontWeight: "600",
+  color: "#1e3a8a",
+  textAlign: "center",
+},
+
+loadedBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 10,
+  backgroundColor: "#dcfce7",
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 20,
+},
+
+loadedText: {
+  marginLeft: 6,
+  color: "#16a34a",
+  fontWeight: "600",
+},
+
+processButton: {
+  marginTop: 20,
+  backgroundColor: "#2563eb",
+  paddingVertical: 14,
+  borderRadius: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  elevation: 2,
+},
+
+processButtonText: {
+  color: "#fff",
+  fontWeight: "600",
+  marginLeft: 8,
+},
+
 });
