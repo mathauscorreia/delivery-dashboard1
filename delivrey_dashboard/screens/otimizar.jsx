@@ -79,6 +79,57 @@ export default function Otimizar() {
 
       {result && (
         <ScrollView style={styles.resultContainer}>
+
+          {/* ===== RELATÓRIO GERAL ===== */}
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryRow}>
+              <View style={[styles.summaryCard, styles.blueCard]}>
+                <Text style={styles.summaryLabelBlue}>Paradas Originais</Text>
+                <Text style={styles.summaryNumberBlue}>
+                  {result.originalCount}
+                </Text>
+              </View>
+
+              <View style={[styles.summaryCard, styles.greenCard]}>
+                <Text style={styles.summaryLabelGreen}>Paradas Agrupadas</Text>
+                <Text style={styles.summaryNumberGreen}>
+                  {result.groupedCount}
+                </Text>
+              </View>
+
+              <View style={[styles.summaryCard, styles.orangeCard]}>
+                <Text style={styles.summaryLabelOrange}>Redução</Text>
+                <Text style={styles.summaryNumberOrange}>
+                  {result.reductionPercentage}%
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.efficiencyCard}>
+              <Text style={styles.efficiencyTitle}>
+                Eficiência do Agrupamento
+              </Text>
+
+              <Text style={styles.efficiencySub}>
+                {result.originalCount - result.groupedCount} paradas eliminadas através do agrupamento
+              </Text>
+
+              <View style={styles.progressContainer}>
+                <View
+                  style={[
+                    styles.progressBar,
+                    { width: `${result.reductionPercentage}%` },
+                  ]}
+                />
+              </View>
+
+              <Text style={styles.progressText}>
+                {result.reductionPercentage}%
+              </Text>
+            </View>
+          </View>
+
+          {/* ===== LISTA DE RUAS ===== */}
           {result.groupedStops.map((stop, index) => {
             const firstTwo = stop.packages?.slice(0, 2) || [];
             const remaining = (stop.packageCount || 0) - firstTwo.length;
@@ -89,7 +140,6 @@ export default function Otimizar() {
                   style={styles.rowHeader}
                   onPress={() => toggleExpand(index)}
                 >
-                  {/* COLUNA ENDEREÇO */}
                   <View style={{ flex: 2 }}>
                     <Text style={styles.address}>
                       {stop.addressLine1}
@@ -108,14 +158,12 @@ export default function Otimizar() {
                     )}
                   </View>
 
-                  {/* BADGE VERDE */}
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
                       {stop.packageCount}
                     </Text>
                   </View>
 
-                  {/* IDS RESUMIDOS */}
                   <View style={{ flex: 2, marginLeft: 15 }}>
                     {firstTwo.map((pkg, i) => (
                       <Text key={i} style={styles.previewId}>
@@ -132,7 +180,6 @@ export default function Otimizar() {
                   </View>
                 </TouchableOpacity>
 
-                {/* EXPANDIDO */}
                 {expandedIndex === index && (
                   <View style={styles.expandedContainer}>
                     <Text style={styles.expandedTitle}>
