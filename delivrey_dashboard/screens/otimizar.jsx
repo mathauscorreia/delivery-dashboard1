@@ -135,77 +135,82 @@ export default function Otimizar() {
             const remaining = (stop.packageCount || 0) - firstTwo.length;
 
             return (
-              <View key={index} style={styles.card}>
+              <View key={index} style={styles.rowContainer}>
                 <TouchableOpacity
                   style={styles.rowHeader}
                   onPress={() => toggleExpand(index)}
                 >
-                  <View style={{ flex: 2 }}>
-                    <Text style={styles.address}>
+                  {/* COLUNA ESQUERDA (seta + número) */}
+                  <View style={styles.leftSection}>
+                    <Ionicons
+                      name={expandedIndex === index ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color="#64748b"
+                    />
+                    <Text style={styles.rowNumber}>{index + 1}</Text>
+                  </View>
+
+                  {/* ENDEREÇO */}
+                  <View style={styles.addressSection}>
+                    <Text style={styles.addressMain}>
                       {stop.addressLine1}
                     </Text>
 
                     {stop.addressLine2 && (
-                      <Text style={styles.sub}>
+                      <Text style={styles.addressSub}>
                         {stop.addressLine2}
                       </Text>
                     )}
 
                     {stop.city && (
-                      <Text style={styles.sub}>
+                      <Text style={styles.addressCity}>
                         {stop.city}
                       </Text>
                     )}
                   </View>
 
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
+                  {/* BADGE */}
+                  <View style={styles.badgeSmall}>
+                    <Text style={styles.badgeSmallText}>
                       {stop.packageCount}
                     </Text>
                   </View>
 
-                  <View style={{ flex: 2, marginLeft: 15 }}>
+                  {/* IDS */}
+                  <View style={styles.idsSection}>
                     {firstTwo.map((pkg, i) => (
-                      <Text key={i} style={styles.previewId}>
+                      <Text key={i} style={styles.idPreview}>
                         {pkg.id}
                         {i === 0 && firstTwo.length > 1 ? "," : ""}
                       </Text>
                     ))}
 
                     {remaining > 0 && (
-                      <Text style={styles.moreText}>
+                      <Text style={styles.moreBlue}>
                         +{remaining}
                       </Text>
                     )}
                   </View>
                 </TouchableOpacity>
 
+                {/* EXPANDIDO */}
                 {expandedIndex === index && (
-                  <View style={styles.expandedContainer}>
+                  <View style={styles.expandedBox}>
                     <Text style={styles.expandedTitle}>
                       Todos os {stop.packageCount} pacotes:
                     </Text>
 
                     <View style={styles.chipsContainer}>
                       {stop.packages?.map((pkg, i) => (
-                        <View key={i} style={styles.chip}>
-                          <Text style={styles.chipText}>
+                        <View key={i} style={styles.chipBlue}>
+                          <Text style={styles.chipBlueText}>
                             {pkg.id}
                           </Text>
                         </View>
                       ))}
                     </View>
 
-                    <TouchableOpacity
-                      style={styles.copyButton}
-                      onPress={async () => {
-                        const allIds = stop.packages
-                          ?.map((p) => p.id)
-                          .join("\n");
-
-                        await Clipboard.setStringAsync(allIds);
-                      }}
-                    >
+                    <TouchableOpacity style={styles.copyButton}>
                       <Ionicons name="copy-outline" size={16} color="#334155" />
                       <Text style={styles.copyText}>
                         Copiar todos os IDs
@@ -450,6 +455,121 @@ progressText: {
   fontWeight: "600",
   color: "#16a34a",
   alignSelf: "flex-end",
+},
+
+rowContainer: {
+  borderBottomWidth: 1,
+  borderColor: "#e2e8f0",
+  paddingVertical: 14,
+},
+
+rowHeader: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+},
+
+leftSection: {
+  width: 40,
+  alignItems: "center",
+},
+
+rowNumber: {
+  fontSize: 14,
+  color: "#64748b",
+  marginTop: 4,
+},
+
+addressSection: {
+  flex: 3,
+},
+
+addressMain: {
+  fontSize: 15,
+  fontWeight: "600",
+  color: "#0f172a",
+},
+
+addressSub: {
+  fontSize: 14,
+  color: "#475569",
+},
+
+addressCity: {
+  fontSize: 14,
+  color: "#0f172a",
+  fontWeight: "500",
+},
+
+badgeSmall: {
+  backgroundColor: "#16a34a",
+  borderRadius: 20,
+  width: 26,
+  height: 26,
+  justifyContent: "center",
+  alignItems: "center",
+  marginHorizontal: 10,
+},
+
+badgeSmallText: {
+  color: "#fff",
+  fontWeight: "600",
+},
+
+idsSection: {
+  flex: 3,
+},
+
+idPreview: {
+  fontSize: 13,
+  color: "#475569",
+},
+
+moreBlue: {
+  color: "#2563eb",
+  fontWeight: "600",
+  marginTop: 2,
+},
+
+expandedBox: {
+  backgroundColor: "#f8fafc",
+  marginTop: 12,
+  padding: 16,
+  borderRadius: 8,
+},
+
+expandedTitle: {
+  fontWeight: "600",
+  marginBottom: 12,
+  color: "#0f172a",
+},
+
+chipBlue: {
+  borderWidth: 1,
+  borderColor: "#93c5fd",
+  backgroundColor: "#eff6ff",
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  marginRight: 10,
+  marginBottom: 10,
+},
+
+chipBlueText: {
+  color: "#1d4ed8",
+  fontSize: 13,
+  fontWeight: "500",
+},
+
+copyButton: {
+  marginTop: 10,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+},
+
+copyText: {
+  color: "#334155",
+  fontSize: 14,
 },
 
 });
