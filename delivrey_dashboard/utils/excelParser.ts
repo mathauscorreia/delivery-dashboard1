@@ -92,6 +92,9 @@ function parseSheetData(data: string[][]): SPXStop[] {
     id: findColumnIndex(header, ['id', 'codigo', 'codigo', 'encomenda', 'pacote', 'spxtn', 'tn']),
     ordem: findColumnIndex(header, ['ordem', 'order', 'sequencia', 'sequencia', 'sequence', 'stop']),
     sequence: findColumnIndex(header, ['sequence', 'sequencia', 'seq']),
+
+     latitude: findColumnIndex(header, ['latitude', 'lat']),
+     longitude: findColumnIndex(header, ['longitude', 'lng', 'long']),
   };
   
   // Validate required columns
@@ -129,6 +132,8 @@ function parseSheetData(data: string[][]): SPXStop[] {
       id: getCellValue(row, indices.id) || `PKG-${i + 1}`,
       ordem: indices.ordem !== -1 ? parseInt(getCellValue(row, indices.ordem)) || (i + 1) : (i + 1),
       sequence: indices.sequence !== -1 ? getCellValue(row, indices.sequence) : undefined,
+      latitude: indices.latitude !== -1 ? getCellValue(row, indices.latitude) : '',
+      longitude: indices.longitude !== -1 ? getCellValue(row, indices.longitude) : '',
     };
     
     // Only add stops with valid address

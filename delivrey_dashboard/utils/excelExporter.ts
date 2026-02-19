@@ -38,26 +38,31 @@ export async function exportToSpoke(
   filename: string = 'rota_spoke.xlsx'
 ): Promise<void> {
   const worksheetData = [
-    [
-      'Name',
-      'Address Line 1',
-      'Address Line 2',
-      'City',
-      'State',
-      'Postal Code',
-      'Country',
-      'Notes',
-    ],
-    ...groupedStops.map(stop => [
-      stop.name,
-      stop.addressLine1,
-      stop.addressLine2,
-      stop.city,
-      stop.state,
-      stop.postalCode,
-      stop.country,
-      stop.notes,
-    ]),
+  [
+    'Name',
+    'Address Line 1',
+    'Address Line 2',
+    'City',
+    'State',
+    'Postal Code',
+    'Country',
+    'Latitude',
+    'Longitude',
+    'Notes',
+  ],
+
+  ...groupedStops.map(stop => [
+    stop.name,
+    stop.addressLine1,
+    stop.addressLine2,
+    stop.city,
+    stop.state,
+    stop.postalCode,
+    stop.country,
+    stop.latitude,
+    stop.longitude,
+    stop.notes,
+  ]),
   ];
 
   const workbook = XLSX.utils.book_new();
@@ -119,8 +124,11 @@ export async function exportDetailedReport(
       'State',
       'Postal Code',
       'Country',
+      'Latitude',
+      'Longitude',
       'Notes',
     ],
+
     ...groupedStops.map(stop => [
       stop.name,
       stop.addressLine1,
@@ -129,8 +137,11 @@ export async function exportDetailedReport(
       stop.state,
       stop.postalCode,
       stop.country,
+      stop.latitude,
+      stop.longitude,
       stop.notes,
     ]),
+
   ];
 
   const spokeSheet = XLSX.utils.aoa_to_sheet(spokeData);

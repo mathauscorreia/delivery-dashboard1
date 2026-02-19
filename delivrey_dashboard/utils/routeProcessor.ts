@@ -11,6 +11,9 @@ export interface SPXStop {
   id: string;
   ordem: number;
   sequence?: string | number; // Package sequence number from SPX file
+
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface GroupedStop {
@@ -25,6 +28,9 @@ export interface GroupedStop {
   packageCount: number;
   packageIds: string[];
   originalAddresses: string[];
+
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface ProcessingResult {
@@ -160,6 +166,8 @@ export function convertToSpokeFormat(groupedMap: Map<string, SPXStop[]>): Groupe
       originalAddresses: stops.map((s: SPXStop) => 
         `${s.endereco}, ${s.numero}${s.complemento ? ' - ' + s.complemento : ''}, ${s.bairro}`
       ),
+      latitude: firstStop.latitude || '',
+      longitude: firstStop.longitude || '',
     };
     
     result.push(groupedStop);
