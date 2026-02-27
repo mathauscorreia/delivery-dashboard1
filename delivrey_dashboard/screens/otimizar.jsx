@@ -84,8 +84,29 @@ function handleProcess() {
 }
 
 async function handleExportSpoke() {
-  if (!result) return;
-  await exportToSpoke(result.groupedStops);
+  if (!result || !fileName) return;
+
+  // Extrai nome sem extensão
+  const baseName = fileName.replace(/\.[^/.]+$/, ""); // remove extensão original
+  const newFileName = `${baseName} - otimizado.xlsx`;
+
+  await exportToSpoke(result.groupedStops, newFileName);
+}
+
+async function handleExportDetailed() {
+  if (!result || !fileName) return;
+
+  // Extrai nome sem extensão
+  const baseName = fileName.replace(/\.[^/.]+$/, ""); // remove extensão original
+  const newFileName = `${baseName} - otimizado.xlsx`;
+
+  await exportDetailedReport(
+    result.groupedStops,
+    result.originalCount,
+    result.groupedCount,
+    result.reductionPercentage,
+    newFileName
+  );
 }
 
 async function handleExportDetailed() {
